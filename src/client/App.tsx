@@ -2,6 +2,7 @@ import React, {createRef} from 'react'
 import {withSnackbar, WithSnackbarProps} from "notistack"
 import io from 'socket.io-client'
 import P5Functions from "./P5Functions"
+import * as THREE from 'three'
 import {ClientGameData} from "./ClientModels"
 import {ClientSocketEventsHelper} from "./ClientSocketEventsHelper"
 import {GameDataDTO, PlayerDTO, PlayerInputDTO} from "../shared/DTOs"
@@ -20,6 +21,16 @@ interface State {
 
 class App extends React.Component<Props, State> implements P5Functions {
     private readonly socket: SocketIOClient.Emitter
+
+    private scene : THREE.Scene = new THREE.Scene()
+    private camera : THREE.PerspectiveCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+    private renderer = new THREE.WebGLRenderer()
+    private geometry = new THREE.BoxGeometry()
+    private material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+    })
+    private cube = new THREE.Mesh(this.geometry, this.material)
 
     private readonly canvasRef = createRef<HTMLCanvasElement>()
     private canvasContext: CanvasRenderingContext2D | null = null
@@ -70,6 +81,12 @@ class App extends React.Component<Props, State> implements P5Functions {
         this.sendInputLoop = this.sendInputLoop.bind(this)
         this.onKeyDownEvent = this.onKeyDownEvent.bind(this)
         this.onKeyUpEvent = this.onKeyUpEvent.bind(this)
+        this.camera.position.z = 2
+
+        this.renderer.setSize(window.innerWidth, window.innerHeight)
+        document.body.appendChild(this.renderer.domElement)
+        
+        this.scene.add(this.cube)
     }
 
     render() {
@@ -253,6 +270,10 @@ class App extends React.Component<Props, State> implements P5Functions {
                 canvas.height = newData.height
                 this.width = newData.width
                 this.height = newData.height
+                this.camera.aspect = canvas.width / canvas.height
+                this.camera.updateProjectionMatrix()
+                this.renderer.setSize(window.innerWidth, window.innerHeight)
+                this.renderer.render(this.scene, this.camera)
             }
         }
     }
@@ -286,6 +307,9 @@ class App extends React.Component<Props, State> implements P5Functions {
                 gameData.draw(this.state.myId)
 
                 ctx.restore()
+                this.cube.rotation.x += 0.01
+                this.cube.rotation.y += 0.01
+                this.renderer.render(this.scene, this.camera)
             }
         }
 

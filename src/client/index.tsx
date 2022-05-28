@@ -7,8 +7,10 @@ import {SnackbarProvider} from "notistack"
 
 ReactDOM.render(
     <SnackbarProvider maxSnack={5}>
+        <>
         <CssBaseline />
         <App />
+        </>
     </SnackbarProvider>,
     document.getElementById('root'));
 
