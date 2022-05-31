@@ -3,6 +3,8 @@ import P5Functions from "./P5Functions"
 import Utils from "../shared/Utils"
 import {RGBColor} from "react-color"
 import {Constants} from "../shared/Constants"
+import * as THREE from 'three'
+import { Camera, Scene } from "three"
 
 export class ClientGameData {
     private readonly p5: P5Functions
@@ -28,11 +30,16 @@ export class ClientGameData {
     private readonly labelAsteroidPoint = 'Asteroid'
     private readonly labelKillingPoint = 'PK'
 
+    private readonly scene : THREE.Scene
+    private readonly camera : THREE.Camera
+
     private width = 0
     private height = 0
 
-    constructor(p5: P5Functions) {
+    constructor(p5: P5Functions, scene : THREE.Scene, camera : THREE.Camera) {
         this.p5 = p5
+        this.scene = scene
+        this.camera = camera
     }
 
     // update client data with new server data
@@ -40,19 +47,22 @@ export class ClientGameData {
         Utils.updateArrayData(this.players, newData.players,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
-            n => new ClientPlayer(n, this.p5)
+            n => new ClientPlayer(n, this.p5),
+            e => e.remove()
         )
 
         Utils.updateArrayData(this.bullets, newData.bullets,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
-            n => new ClientBullet(n, this.p5)
+            n => new ClientBullet(n, this.p5),
+            e => e.remove()
         )
 
         Utils.updateArrayData(this.asteroids, newData.asteroids,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
-            n => new ClientAsteroid(n, this.p5)
+            n => new ClientAsteroid(n, this.p5, this.camera, this.scene),
+            e => e.remove()
         )
 
         if (this.width != newData.width || this.height != newData.height) {
@@ -81,6 +91,8 @@ export class ClientGameData {
             const x = Math.min(Math.max(me.x, this.playerViewMinX), this.playerViewMaxX)
             const y = Math.min(Math.max(me.y, this.playerViewMinY), this.playerViewMaxY)
             p5.translate(-x, -y)
+            // this.camera.position.x = x
+            // this.camera.position.y = y
         }
 
         for (let player of this.players) {
@@ -197,6 +209,10 @@ export class ClientPlayer {
         this.p5 = p5
     }
 
+    remove() : void {
+
+    }
+
     update(newData: PlayerDTO): void {
         this.x = newData.x
         this.y = newData.y
@@ -282,6 +298,10 @@ export class ClientBullet {
         this.p5 = p5
     }
 
+    remove() : void {
+
+    }
+
     update(data: BulletDTO) {
         this.x = data.x
         this.y = data.y
@@ -306,29 +326,60 @@ export class ClientBullet {
     }
 }
 
+const asteroidMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+
+function createPlaneGeometry(vertices : number[][], material : THREE.MeshBasicMaterial) {
+
+    const shape = new THREE.Shape()
+    shape.moveTo(vertices[0][0], vertices[0][1])
+    for (let vertex of vertices.slice(1)) {
+        shape.lineTo(vertex[0], vertex[1])
+    }
+
+    const geometry = new THREE.ShapeGeometry( shape );
+    const mesh = new THREE.Mesh( geometry, material ) ;
+    
+	// Write the code to generate minimum number of faces for the polygon.
+	// Return the geometry object
+	return mesh;
+}
+
 export class ClientAsteroid {
     readonly id: string
     readonly vertices: number[][]
     private x: number
     private y: number
     private rotation: number
+    private mesh : THREE.Mesh
+    private scene : THREE.Scene
 
     private readonly p5: P5Functions
 
-    constructor(dto: AsteroidDTO, p5: P5Functions) {
+    constructor(dto: AsteroidDTO, p5: P5Functions, camera: Camera, scene: Scene) {
         this.id = dto.id
         this.vertices = dto.vertices
         this.x = dto.x
         this.y = dto.y
         this.rotation = dto.rotation
+        this.mesh = createPlaneGeometry(this.vertices, asteroidMaterial)
+        this.scene = scene
+
+        scene.add(this.mesh)
 
         this.p5 = p5
+    }
+
+    remove() : void {
+        this.scene.remove(this.mesh)
     }
 
     update(newData: AsteroidDTO): void {
         this.x = newData.x
         this.y = newData.y
         this.rotation = newData.rotation
+        this.mesh.position.x = this.x
+        this.mesh.position.y = -this.y
+        this.mesh.rotation.z = this.rotation
     }
 
     draw(): void {

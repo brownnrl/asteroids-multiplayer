@@ -76,6 +76,7 @@
     "ts-pnp": "1.1.2",
     "url-loader": "1.1.2",
     "uuid": "^3.3.2",
+    "lil-gui": "^0.16.1",
     "victor": "^1.1.0",
     "webpack": "4.29.6",
     "webpack-dev-server": "^3.11.0",

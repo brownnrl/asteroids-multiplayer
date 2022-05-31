@@ -9,6 +9,8 @@ import {GameDataDTO, PlayerDTO, PlayerInputDTO} from "../shared/DTOs"
 import {RGBColor} from "react-color"
 import LogInView from "./LogInView"
 import './App.css'
+import { Vector3 } from 'three'
+import GUI from 'lil-gui'
 
 interface Props extends WithSnackbarProps {}
 
@@ -23,14 +25,39 @@ class App extends React.Component<Props, State> implements P5Functions {
     private readonly socket: SocketIOClient.Emitter
 
     private scene : THREE.Scene = new THREE.Scene()
-    private camera : THREE.PerspectiveCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+    //private camera : THREE.PerspectiveCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+    private camera : THREE.OrthographicCamera = new THREE.OrthographicCamera(
+        -2,
+         2,
+         2,
+        -2,
+        0.1, 1000
+    )
     private renderer = new THREE.WebGLRenderer()
-    private geometry = new THREE.BoxGeometry()
+    private geometry = new THREE.BoxGeometry(100,100,100)
     private material = new THREE.MeshBasicMaterial({
         color: 0x00ff00,
         wireframe: true,
     })
     private cube = new THREE.Mesh(this.geometry, this.material)
+
+    private gui = new GUI()
+
+    private _viewport = {
+        viewSize: 0,
+        aspectRatio: 1,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        near: -1000,
+        far: 1000
+    }
+
+    private debugData = {
+        cubex : 2000,
+        cubey: 2000
+    };
 
     private readonly canvasRef = createRef<HTMLCanvasElement>()
     private canvasContext: CanvasRenderingContext2D | null = null
@@ -47,7 +74,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     private then = Date.now()
     private delta: number = 0
 
-    private readonly currentGameData: ClientGameData = new ClientGameData(this)
+    private readonly currentGameData: ClientGameData = new ClientGameData(this, this.scene, this.camera)
 
     // keep track of previous login info to provide easier login experience
     private prevLoggedInName: string | null = null
@@ -81,12 +108,14 @@ class App extends React.Component<Props, State> implements P5Functions {
         this.sendInputLoop = this.sendInputLoop.bind(this)
         this.onKeyDownEvent = this.onKeyDownEvent.bind(this)
         this.onKeyUpEvent = this.onKeyUpEvent.bind(this)
-        this.camera.position.z = 2
 
-        this.renderer.setSize(window.innerWidth, window.innerHeight)
         document.body.appendChild(this.renderer.domElement)
+
+        this.gui.add(this.debugData, 'cubex', 1500, 2500, 10)
+        this.gui.add(this.debugData, 'cubey', 1500, 2500, 10)
         
         this.scene.add(this.cube)
+        this.onWindowResizeEvent()
     }
 
     render() {
@@ -129,6 +158,8 @@ class App extends React.Component<Props, State> implements P5Functions {
             document.addEventListener('keydown', this.onKeyDownEvent)
             document.addEventListener('keyup', this.onKeyUpEvent)
             window.addEventListener('resize', this.onWindowResizeEvent)
+
+            this.onWindowResizeEvent()
         }
     }
 
@@ -270,10 +301,7 @@ class App extends React.Component<Props, State> implements P5Functions {
                 canvas.height = newData.height
                 this.width = newData.width
                 this.height = newData.height
-                this.camera.aspect = canvas.width / canvas.height
-                this.camera.updateProjectionMatrix()
-                this.renderer.setSize(window.innerWidth, window.innerHeight)
-                this.renderer.render(this.scene, this.camera)
+                this.onWindowResizeEvent()
             }
         }
     }
@@ -281,7 +309,39 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onWindowResizeEvent(): void {
         const w = window.innerWidth
         const h = window.innerHeight
+        const viewSize = this.width;
+        const aspectRatio = w / h
+        console.log("w", w)
+        console.log("h", h)
+        console.log("viewSize", viewSize)
+        console.log("game width: ", this.width)
+        console.log("aspectRatio*viewSize", aspectRatio*viewSize)
+        console.log("aspect ratio", aspectRatio)
+
+        // TODO: Handle cases where height is greater than widths
         const fitHeight = w >= h
+
+        this._viewport.aspectRatio = aspectRatio
+        this._viewport.viewSize = viewSize
+        this._viewport.left = -aspectRatio * viewSize / 2
+        this._viewport.right = aspectRatio * viewSize / 2
+        this._viewport.bottom = -viewSize / 2
+        this._viewport.top = viewSize / 2
+        this._viewport.near = -1000
+        this._viewport.far = 1000
+
+        //this.camera.aspect = w / h
+        this.camera.left = this._viewport.left
+        this.camera.right = this._viewport.right
+        this.camera.top = this._viewport.top
+        this.camera.bottom = this._viewport.bottom
+        this.camera.position.x = 2000
+        this.camera.position.y = -2000
+        this.camera.position.z = 100;
+        this.camera.updateProjectionMatrix()
+        this.camera.lookAt(new Vector3(this.camera.position.x, this.camera.position.y, 0))
+        this.renderer.setSize(w, h)
+        this.renderer.render(this.scene, this.camera)
         if (this.state.fitScreenHeight !== fitHeight) {
             this.setState({fitScreenHeight: fitHeight})
         }
@@ -307,12 +367,15 @@ class App extends React.Component<Props, State> implements P5Functions {
                 gameData.draw(this.state.myId)
 
                 ctx.restore()
-                this.cube.rotation.x += 0.01
-                this.cube.rotation.y += 0.01
-                this.renderer.render(this.scene, this.camera)
             }
         }
 
+        this.cube.position.x = this.debugData.cubex
+        this.cube.position.y = -this.debugData.cubey
+        this.cube.position.z = 0
+        this.cube.rotation.x += 0.01
+        this.cube.rotation.y += 0.01
+        this.renderer.render(this.scene, this.camera)
         this.requestAnimationFrameHandler = window.requestAnimationFrame(this.onAnimationFrame)
     }
 

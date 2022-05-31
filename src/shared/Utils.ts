@@ -5,12 +5,14 @@ export default class Utils {
     static updateArrayData<E, N>(es: E[], ns: N[],
                                  comparator: (e: E, n: N) => boolean,
                                  updater: (e: E, n: N) => void,
-                                 creator: (n: N) => E): void {
+                                 creator: (n: N) => E,
+                                 remover: (e: E) => void): void {
         let i = es.length
         while (i--) {
             const e = es[i]
             const ni = ns.findIndex(n => comparator(e, n))
             if (ni < 0) {
+                remover(e)
                 es.splice(i, 1)
             } else {
                 const n = ns[ni]
