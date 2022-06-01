@@ -1,4 +1,4 @@
-import React, {createRef} from 'react'
+import React, {createRef, SetStateAction} from 'react'
 import {withSnackbar, WithSnackbarProps} from "notistack"
 import io from 'socket.io-client'
 import P5Functions from "./P5Functions"
@@ -19,6 +19,7 @@ interface State {
     // null if my player instance doesn't exist (e.g. didn't log in yet, dead etc)
     myId: string | null
     fitScreenHeight: boolean
+    threeJSGameVisible: boolean
 }
 
 class App extends React.Component<Props, State> implements P5Functions {
@@ -41,6 +42,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     })
     private cube = new THREE.Mesh(this.geometry, this.material)
 
+
     private gui = new GUI()
 
     private _viewport = {
@@ -56,7 +58,8 @@ class App extends React.Component<Props, State> implements P5Functions {
 
     private debugData = {
         cubex : 2000,
-        cubey: 2000
+        cubey: 2000,
+        turnOnThreeCanvas: false
     };
 
     private readonly canvasRef = createRef<HTMLCanvasElement>()
@@ -93,7 +96,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     constructor(props: Props) {
         super(props)
         this.socket = io.connect()
-        this.state = { myId: null, fitScreenHeight: true }
+        this.state = { myId: null, fitScreenHeight: true, threeJSGameVisible: false }
 
         this.onAnimationFrame = this.onAnimationFrame.bind(this)
         this.onWindowResizeEvent = this.onWindowResizeEvent.bind(this)
@@ -113,16 +116,29 @@ class App extends React.Component<Props, State> implements P5Functions {
 
         this.gui.add(this.debugData, 'cubex', 1500, 2500, 10)
         this.gui.add(this.debugData, 'cubey', 1500, 2500, 10)
+        this.gui
+            .add(this.debugData, 'turnOnThreeCanvas')
+            .onFinishChange((value : boolean) => {this.updateThreeJSGameVisibility(value)});
         
         this.scene.add(this.cube)
         this.onWindowResizeEvent()
+        this.updateThreeJSGameVisibility(this.state.threeJSGameVisible)
+    }
+
+    updateThreeJSGameVisibility(value: boolean) {
+        this.setState({threeJSGameVisible : value})
+        const elem = this.renderer.domElement
+        elem.style.visibility = value ? "visible" : "hidden"
+        elem.style.position = "absolute"
+        elem.style.top = "0"
+        elem.style.left = "0"
     }
 
     render() {
         const divStyle = this.state.fitScreenHeight ? 'fitHeight' : 'fitWidth'
         return (
             <div style={{width: "100vw", height: "100vh", backgroundColor: "black"}}>
-                <div className={divStyle} style={{position: "relative"}}>
+                <div className={divStyle} style={{position: "relative", visibility: this.state.threeJSGameVisible? "hidden" : "visible"}}>
                     <canvas ref={this.canvasRef} width={this.width} height={this.height}
                             style={{width: "100%", height: "100%", display: "block", border: '2px solid white'}}>
                         Fallback text for old browsers.

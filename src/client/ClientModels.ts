@@ -47,7 +47,7 @@ export class ClientGameData {
         Utils.updateArrayData(this.players, newData.players,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
-            n => new ClientPlayer(n, this.p5),
+            n => new ClientPlayer(n, this.p5, this.scene, this.camera),
             e => e.remove()
         )
 
@@ -167,6 +167,24 @@ export class ClientGameData {
     }
 }
 
+const asteroidMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+
+function createPlaneGeometry(vertices : number[][], material : THREE.MeshBasicMaterial) {
+
+    const shape = new THREE.Shape()
+    shape.moveTo(vertices[0][0], vertices[0][1])
+    for (let vertex of vertices.slice(1)) {
+        shape.lineTo(vertex[0], vertex[1])
+    }
+
+    const geometry = new THREE.ShapeGeometry( shape );
+    const mesh = new THREE.Mesh( geometry, material ) ;
+    
+	// Write the code to generate minimum number of faces for the polygon.
+	// Return the geometry object
+	return mesh;
+}
+
 export class ClientPlayer {
     readonly id: string
     readonly name: string
@@ -177,6 +195,10 @@ export class ClientPlayer {
     private readonly tailSize: number
     private readonly tailMinRotation = Constants.QUARTER_PI
     private readonly tailMaxRotation = 3 * Constants.QUARTER_PI
+
+    private mesh : THREE.Mesh
+    private scene : THREE.Scene
+    private camera : THREE.Camera
 
     private color: RGBColor
     x: number
@@ -189,7 +211,7 @@ export class ClientPlayer {
 
     private readonly p5: P5Functions
 
-    constructor(dto: PlayerDTO, p5: P5Functions) {
+    constructor(dto: PlayerDTO, p5: P5Functions, scene: Scene, camera: Camera) {
         this.id = dto.id
         this.name = dto.name
         this.size = dto.size
@@ -206,11 +228,17 @@ export class ClientPlayer {
         this.asteroidPoints = dto.asteroidPoints
         this.killingPoints = dto.killingPoints
 
+        this.scene = scene
+        this.camera = camera
+        this.mesh = createPlaneGeometry(this.vertices, asteroidMaterial)
+
+        this.scene.add(this.mesh)
+
         this.p5 = p5
     }
 
     remove() : void {
-
+        this.scene.remove(this.mesh)
     }
 
     update(newData: PlayerDTO): void {
@@ -221,6 +249,10 @@ export class ClientPlayer {
         this.showTail = newData.showTail
         this.asteroidPoints = newData.asteroidPoints
         this.killingPoints = newData.killingPoints
+
+        this.mesh.position.x = newData.x
+        this.mesh.position.y = -newData.y
+        this.mesh.rotation.z = this.heading - Constants.HALF_PI
     }
 
     draw(): void {
@@ -326,23 +358,6 @@ export class ClientBullet {
     }
 }
 
-const asteroidMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-
-function createPlaneGeometry(vertices : number[][], material : THREE.MeshBasicMaterial) {
-
-    const shape = new THREE.Shape()
-    shape.moveTo(vertices[0][0], vertices[0][1])
-    for (let vertex of vertices.slice(1)) {
-        shape.lineTo(vertex[0], vertex[1])
-    }
-
-    const geometry = new THREE.ShapeGeometry( shape );
-    const mesh = new THREE.Mesh( geometry, material ) ;
-    
-	// Write the code to generate minimum number of faces for the polygon.
-	// Return the geometry object
-	return mesh;
-}
 
 export class ClientAsteroid {
     readonly id: string
