@@ -132,6 +132,7 @@ class App extends React.Component<Props, State> implements P5Functions {
         elem.style.position = "absolute"
         elem.style.top = "0"
         elem.style.left = "0"
+        this.currentGameData.enableDrawing = !value
     }
 
     render() {
@@ -278,7 +279,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onGameDataEvent(gameData: GameDataDTO): void {
         this.updateCanvasSizeIfChanged(gameData)
         // update client game data (e.g. position, color etc) with server data
-        this.currentGameData.update(gameData)
+        this.currentGameData.update(gameData, this.state.myId)
     }
 
     private onNewPlayerJoinedEvent(player: PlayerDTO): void {
@@ -367,7 +368,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onAnimationFrame(): void {
         const ctx = this.canvasContext
         const gameData = this.currentGameData
-        if (ctx && gameData) {
+        if (ctx && gameData && !this.state.threeJSGameVisible) {
             // framerate related logic
             this.now = Date.now()
             this.delta = this.now - this.then

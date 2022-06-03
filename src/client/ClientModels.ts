@@ -12,6 +12,8 @@ export class ClientGameData {
     private readonly bullets: ClientBullet[] = []
     readonly asteroids: ClientAsteroid[] = []
 
+    enableDrawing : boolean = true
+
     // properties used for camera following player effect
     readonly playerViewScaleRatio = 3.6
     private playerViewMinX: number = 0
@@ -46,7 +48,7 @@ export class ClientGameData {
     }
 
     // update client data with new server data
-    update(newData: GameDataDTO): void {
+    update(newData: GameDataDTO, myId: string | null): void {
         Utils.updateArrayData(this.players, newData.players,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
@@ -78,9 +80,22 @@ export class ClientGameData {
             this.height = newData.height
 
         }
+
+        // if 'I' am playing, keep me in the center of the canvas
+        // else, show the whole canvas
+        const me = this.players.find(player => myId === player.id)
+        if (me) {
+            const x = Math.min(Math.max(me.x, this.playerViewMinX), this.playerViewMaxX)
+            const y = Math.min(Math.max(me.y, this.playerViewMinY), this.playerViewMaxY)
+            this.cameraX = x
+            this.cameraY = -y
+            this.camera.position.x = this.cameraX
+            this.camera.position.y = this.cameraY
+        }
     }
 
     draw(myId: string | null): void {
+        if(!this.enableDrawing) { return; }
         const p5 = this.p5
         p5.background(0)
 
@@ -94,13 +109,7 @@ export class ClientGameData {
             p5.scale(this.playerViewScaleRatio)
             const x = Math.min(Math.max(me.x, this.playerViewMinX), this.playerViewMaxX)
             const y = Math.min(Math.max(me.y, this.playerViewMinY), this.playerViewMaxY)
-            this.cameraX = x
-            this.cameraY = -y
-            this.camera.position.x = this.cameraX
-            this.camera.position.y = this.cameraY
             p5.translate(-x, -y)
-            // this.camera.position.x = x
-            // this.camera.position.y = y
         }
 
         for (let player of this.players) {
@@ -217,6 +226,7 @@ export class ClientPlayer {
     asteroidPoints: number
     killingPoints: number
 
+
     private readonly p5: P5Functions
 
     constructor(dto: PlayerDTO, p5: P5Functions, scene: Scene, camera: Camera) {
@@ -264,6 +274,7 @@ export class ClientPlayer {
     }
 
     draw(): void {
+
         const p5 = this.p5
         p5.save()
         p5.translate(this.x, this.y)
