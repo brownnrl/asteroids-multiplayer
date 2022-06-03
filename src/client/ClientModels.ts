@@ -13,11 +13,14 @@ export class ClientGameData {
     readonly asteroids: ClientAsteroid[] = []
 
     // properties used for camera following player effect
-    private readonly playerViewScaleRatio = 3.6
+    readonly playerViewScaleRatio = 3.6
     private playerViewMinX: number = 0
     private playerViewMaxX: number = 0
     private playerViewMinY: number = 0
     private playerViewMaxY: number = 0
+
+    private cameraX: number = 0
+    private cameraY: number = 0
 
     private readonly minimapScaleFactor = 0.2
 
@@ -54,7 +57,7 @@ export class ClientGameData {
         Utils.updateArrayData(this.bullets, newData.bullets,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
-            n => new ClientBullet(n, this.p5),
+            n => new ClientBullet(n, this.p5, this.scene, this.camera),
             e => e.remove()
         )
 
@@ -73,6 +76,7 @@ export class ClientGameData {
 
             this.width = newData.width
             this.height = newData.height
+
         }
     }
 
@@ -90,6 +94,10 @@ export class ClientGameData {
             p5.scale(this.playerViewScaleRatio)
             const x = Math.min(Math.max(me.x, this.playerViewMinX), this.playerViewMaxX)
             const y = Math.min(Math.max(me.y, this.playerViewMinY), this.playerViewMaxY)
+            this.cameraX = x
+            this.cameraY = -y
+            this.camera.position.x = this.cameraX
+            this.camera.position.y = this.cameraY
             p5.translate(-x, -y)
             // this.camera.position.x = x
             // this.camera.position.y = y
@@ -252,7 +260,7 @@ export class ClientPlayer {
 
         this.mesh.position.x = newData.x
         this.mesh.position.y = -newData.y
-        this.mesh.rotation.z = this.heading - Constants.HALF_PI
+        this.mesh.rotation.z = -(this.heading+Constants.HALF_PI)
     }
 
     draw(): void {
@@ -313,25 +321,39 @@ export class ClientPlayer {
 export class ClientBullet {
     readonly id: string
     readonly vertices: number[][]
+    private readonly size: number = 5
+    readonly threejs_vertices: number[][] = [[-this.size, -this.size], 
+                                             [ this.size, -this.size],
+                                             [ this.size,  this.size],
+                                             [-this.size,  this.size]
+                                            ]
     x: number
     y: number
     heading: number
     color: RGBColor
 
+    private mesh : THREE.Mesh
+    private scene : THREE.Scene
+    private camera : THREE.Camera
     private readonly p5: P5Functions
 
-    constructor(data: BulletDTO, p5: P5Functions) {
+    constructor(data: BulletDTO, p5: P5Functions, scene: Scene, camera: Camera) {
         this.id = data.id
         this.heading = data.heading
         this.x = data.x
         this.y = data.y
         this.vertices = data.vertices
         this.color = data.color
+        this.scene = scene
+        this.camera = camera
+        
+        this.mesh = createPlaneGeometry(this.threejs_vertices, asteroidMaterial)
+        this.scene.add(this.mesh)
         this.p5 = p5
     }
 
     remove() : void {
-
+        this.scene.remove(this.mesh)
     }
 
     update(data: BulletDTO) {
@@ -339,6 +361,9 @@ export class ClientBullet {
         this.y = data.y
         this.heading = data.heading
         this.color = data.color
+        this.mesh.position.x = this.x
+        this.mesh.position.y = -this.y
+        this.mesh.rotation.z = -this.heading
     }
 
     draw() {
@@ -394,7 +419,7 @@ export class ClientAsteroid {
         this.rotation = newData.rotation
         this.mesh.position.x = this.x
         this.mesh.position.y = -this.y
-        this.mesh.rotation.z = this.rotation
+        this.mesh.rotation.z = -(this.rotation)
     }
 
     draw(): void {

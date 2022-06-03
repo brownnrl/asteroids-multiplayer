@@ -325,20 +325,21 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onWindowResizeEvent(): void {
         const w = window.innerWidth
         const h = window.innerHeight
-        const viewSize = this.width;
         const aspectRatio = w / h
         console.log("w", w)
         console.log("h", h)
-        console.log("viewSize", viewSize)
         console.log("game width: ", this.width)
-        console.log("aspectRatio*viewSize", aspectRatio*viewSize)
         console.log("aspect ratio", aspectRatio)
 
         // TODO: Handle cases where height is greater than widths
         const fitHeight = w >= h
 
-        this._viewport.aspectRatio = aspectRatio
+        const viewSize = this.width / this.currentGameData.playerViewScaleRatio
         this._viewport.viewSize = viewSize
+        console.log("viewSize", viewSize)
+        console.log("aspectRatio*viewSize", aspectRatio*viewSize)
+
+        this._viewport.aspectRatio = aspectRatio
         this._viewport.left = -aspectRatio * viewSize / 2
         this._viewport.right = aspectRatio * viewSize / 2
         this._viewport.bottom = -viewSize / 2
