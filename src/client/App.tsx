@@ -379,12 +379,14 @@ class App extends React.Component<Props, State> implements P5Functions {
             }
         }
 
-        this.cube.position.x = this.debugData.cubex
-        this.cube.position.y = -this.debugData.cubey
-        this.cube.position.z = 0
-        this.cube.rotation.x += 0.01
-        this.cube.rotation.y += 0.01
-        this.renderer.render(this.scene, this.camera)
+        if(this.state.threeJSGameVisible) {
+            this.cube.position.x = this.debugData.cubex
+            this.cube.position.y = -this.debugData.cubey
+            this.cube.position.z = 0
+            this.cube.rotation.x += 0.01
+            this.cube.rotation.y += 0.01
+            this.renderer.render(this.scene, this.camera)
+        }
         this.requestAnimationFrameHandler = window.requestAnimationFrame(this.onAnimationFrame)
     }
 
