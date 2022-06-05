@@ -3,7 +3,7 @@ import {withSnackbar, WithSnackbarProps} from "notistack"
 import io from 'socket.io-client'
 import P5Functions from "./P5Functions"
 import * as THREE from 'three'
-import {ClientGameData} from "./ClientModels"
+import {ClientGameData, ViewPort} from "./ClientModels"
 import {ClientSocketEventsHelper} from "./ClientSocketEventsHelper"
 import {GameDataDTO, PlayerDTO, PlayerInputDTO} from "../shared/DTOs"
 import {RGBColor} from "react-color"
@@ -45,16 +45,7 @@ class App extends React.Component<Props, State> implements P5Functions {
 
     private gui = new GUI()
 
-    private _viewport = {
-        viewSize: 0,
-        aspectRatio: 1,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-        near: -1000,
-        far: 1000
-    }
+    private _viewport = new ViewPort()
 
     private debugData = {
         cubex : 2000,
@@ -279,7 +270,7 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onGameDataEvent(gameData: GameDataDTO): void {
         this.updateCanvasSizeIfChanged(gameData)
         // update client game data (e.g. position, color etc) with server data
-        this.currentGameData.update(gameData, this.state.myId)
+        this.currentGameData.update(gameData, this.state.myId, this._viewport)
     }
 
     private onNewPlayerJoinedEvent(player: PlayerDTO): void {

@@ -6,6 +6,17 @@ import {Constants} from "../shared/Constants"
 import * as THREE from 'three'
 import { Camera, Scene } from "three"
 
+export class ViewPort {
+    viewSize : number = 0
+    aspectRatio : number = 0
+    left : number = 0
+    right : number = 0
+    top : number = 0
+    bottom : number = 0
+    near : number = -1000
+    far : number = 1000
+}
+
 export class ClientGameData {
     private readonly p5: P5Functions
     private readonly players: ClientPlayer[] = []
@@ -48,7 +59,7 @@ export class ClientGameData {
     }
 
     // update client data with new server data
-    update(newData: GameDataDTO, myId: string | null): void {
+    update(newData: GameDataDTO, myId: string | null, viewport : ViewPort) {
         Utils.updateArrayData(this.players, newData.players,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
@@ -85,10 +96,18 @@ export class ClientGameData {
         // else, show the whole canvas
         const me = this.players.find(player => myId === player.id)
         if (me) {
-            const x = Math.min(Math.max(me.x, this.playerViewMinX), this.playerViewMaxX)
-            const y = Math.min(Math.max(me.y, this.playerViewMinY), this.playerViewMaxY)
-            this.cameraX = x
-            this.cameraY = -y
+            const midExtent = (low:number, high:number, value : number, extent: number) => {
+                const mid = (high - low) / 2
+                if (value < mid) {
+                    return mid
+                } else if (value > extent - mid) {
+                    return extent - mid
+                } else {
+                    return value
+                }
+            }
+            this.cameraX = midExtent(viewport.left, viewport.right, me.x, this.width)
+            this.cameraY = -1 * midExtent(viewport.bottom, viewport.top, me.y, this.height)
             this.camera.position.x = this.cameraX
             this.camera.position.y = this.cameraY
         }
