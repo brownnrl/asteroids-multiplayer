@@ -41,6 +41,9 @@ class App extends React.Component<Props, State> implements P5Functions {
     private readonly scoresDivs : HTMLDivElement[] = []
     private readonly scoresLabels : CSS2DObject[] = []
 
+    private readonly nameDivs : HTMLDivElement[] = []
+    private readonly nameLabels : CSS2DObject[] = []
+
     private geometry = new THREE.BoxGeometry(100,100,100)
     private material = new THREE.MeshBasicMaterial({
         color: 0x00ff00,

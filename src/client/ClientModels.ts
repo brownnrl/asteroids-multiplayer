@@ -281,6 +281,9 @@ export class ClientPlayer {
     private scene : THREE.Scene
     private camera : THREE.Camera
 
+    private readonly nameDiv : HTMLDivElement
+    private readonly nameLabel : CSS2DObject
+
     private color: RGBColor
     x: number
     y: number
@@ -314,6 +317,16 @@ export class ClientPlayer {
         this.camera = camera
         this.mesh = createPlaneGeometry(this.vertices, asteroidMaterial)
 
+        this.nameDiv = document.createElement( 'div' );
+        this.nameDiv.className = 'label';
+        this.nameDiv.textContent = 'name';
+        this.nameDiv.style.marginTop = '-1em';
+        this.nameDiv.style.color = 'white';
+        this.nameDiv.style.zIndex = '10';
+        this.nameDiv.innerText = this.name;
+        this.nameLabel = new CSS2DObject( this.nameDiv );
+        this.nameLabel.layers.set( 0 );
+        this.scene.add( this.nameLabel );
         this.scene.add(this.mesh)
 
         this.p5 = p5
@@ -321,6 +334,8 @@ export class ClientPlayer {
 
     remove() : void {
         this.scene.remove(this.mesh)
+        this.scene.remove(this.nameLabel)
+        this.nameDiv.parentElement?.removeChild(this.nameDiv)
     }
 
     update(newData: PlayerDTO): void {
@@ -334,6 +349,8 @@ export class ClientPlayer {
 
         this.mesh.position.x = newData.x
         this.mesh.position.y = -newData.y
+        this.nameLabel.position.x = newData.x
+        this.nameLabel.position.y = -newData.y + 10
         this.mesh.rotation.z = -(this.heading+Constants.HALF_PI)
     }
 
