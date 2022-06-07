@@ -1,8 +1,9 @@
-import React, {createRef, SetStateAction} from 'react'
+import React, {createRef} from 'react'
 import {withSnackbar, WithSnackbarProps} from "notistack"
 import io from 'socket.io-client'
 import P5Functions from "./P5Functions"
 import * as THREE from 'three'
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {ClientGameData, ViewPort} from "./ClientModels"
 import {ClientSocketEventsHelper} from "./ClientSocketEventsHelper"
 import {GameDataDTO, PlayerDTO, PlayerInputDTO} from "../shared/DTOs"
@@ -34,7 +35,12 @@ class App extends React.Component<Props, State> implements P5Functions {
         -2,
         0.1, 1000
     )
-    private renderer = new THREE.WebGLRenderer()
+    private readonly renderer = new THREE.WebGLRenderer()
+    private readonly labelRenderer
+
+    private readonly scoresDivs : HTMLDivElement[] = []
+    private readonly scoresLabels : CSS2DObject[] = []
+
     private geometry = new THREE.BoxGeometry(100,100,100)
     private material = new THREE.MeshBasicMaterial({
         color: 0x00ff00,
@@ -103,6 +109,25 @@ class App extends React.Component<Props, State> implements P5Functions {
         this.onKeyDownEvent = this.onKeyDownEvent.bind(this)
         this.onKeyUpEvent = this.onKeyUpEvent.bind(this)
 
+        for(let i = 0; i < 7*3 + 1; i++) {
+            const scoresDiv = document.createElement( 'div' );
+            scoresDiv.className = 'label';
+            scoresDiv.textContent = 'Scores';
+            scoresDiv.style.marginTop = '-1em';
+            scoresDiv.style.color = 'white';
+            scoresDiv.style.zIndex = '10';
+            const scoresLabel = new CSS2DObject( scoresDiv );
+            scoresLabel.layers.set( 0 );
+            this.scene.add( scoresLabel );
+            this.scoresDivs[i] = scoresDiv;
+            this.scoresLabels[i] = scoresLabel;
+        }
+        this.labelRenderer = new CSS2DRenderer();
+        this.labelRenderer.setSize( window.innerWidth, window.innerHeight );
+        this.labelRenderer.domElement.style.position = 'absolute';
+        this.labelRenderer.domElement.style.top = '0px';
+        this.labelRenderer.domElement.style.zIndex = '9';
+        document.body.appendChild(this.labelRenderer.domElement );
         document.body.appendChild(this.renderer.domElement)
 
         this.gui.add(this.debugData, 'cubex', 1500, 2500, 10)
@@ -124,6 +149,11 @@ class App extends React.Component<Props, State> implements P5Functions {
         elem.style.top = "0"
         elem.style.left = "0"
         this.currentGameData.enableDrawing = !value
+    }
+
+    private threeRender() : void{
+        this.labelRenderer.render(this.scene, this.camera)
+        this.renderer.render(this.scene, this.camera)
     }
 
     render() {
@@ -270,7 +300,11 @@ class App extends React.Component<Props, State> implements P5Functions {
     private onGameDataEvent(gameData: GameDataDTO): void {
         this.updateCanvasSizeIfChanged(gameData)
         // update client game data (e.g. position, color etc) with server data
-        this.currentGameData.update(gameData, this.state.myId, this._viewport)
+        this.currentGameData.update(gameData, 
+                                    this.state.myId,
+                                    this._viewport,
+                                    this.scoresDivs,
+                                    this.scoresLabels)
     }
 
     private onNewPlayerJoinedEvent(player: PlayerDTO): void {
@@ -350,11 +384,13 @@ class App extends React.Component<Props, State> implements P5Functions {
         this.camera.updateProjectionMatrix()
         this.camera.lookAt(new Vector3(this.camera.position.x, this.camera.position.y, 0))
         this.renderer.setSize(w, h)
-        this.renderer.render(this.scene, this.camera)
+        this.labelRenderer.setSize(w, h)
+        this.threeRender()
         if (this.state.fitScreenHeight !== fitHeight) {
             this.setState({fitScreenHeight: fitHeight})
         }
     }
+
 
     private onAnimationFrame(): void {
         const ctx = this.canvasContext
@@ -385,7 +421,7 @@ class App extends React.Component<Props, State> implements P5Functions {
             this.cube.position.z = 0
             this.cube.rotation.x += 0.01
             this.cube.rotation.y += 0.01
-            this.renderer.render(this.scene, this.camera)
+            this.threeRender()
         }
         this.requestAnimationFrameHandler = window.requestAnimationFrame(this.onAnimationFrame)
     }

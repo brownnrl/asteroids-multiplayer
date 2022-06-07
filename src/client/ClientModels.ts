@@ -5,6 +5,9 @@ import {RGBColor} from "react-color"
 import {Constants} from "../shared/Constants"
 import * as THREE from 'three'
 import { Camera, Scene } from "three"
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer"
+
+
 
 export class ViewPort {
     viewSize : number = 0
@@ -49,6 +52,7 @@ export class ClientGameData {
     private readonly scene : THREE.Scene
     private readonly camera : THREE.Camera
 
+
     private width = 0
     private height = 0
 
@@ -59,7 +63,11 @@ export class ClientGameData {
     }
 
     // update client data with new server data
-    update(newData: GameDataDTO, myId: string | null, viewport : ViewPort) {
+    update(newData: GameDataDTO, 
+           myId: string | null,
+           viewport : ViewPort,
+           scoresDivs : HTMLDivElement[],
+           scoresLabels : CSS2DObject[]) {
         Utils.updateArrayData(this.players, newData.players,
             (e, n) => e.id === n.id,
             (e, n) => e.update(n),
@@ -110,6 +118,43 @@ export class ClientGameData {
             this.cameraY = -1 * midExtent(viewport.bottom, viewport.top, me.y, this.height)
             this.camera.position.x = this.cameraX
             this.camera.position.y = this.cameraY
+        }
+
+        const textSize = this.pointsTextSize
+        const count = Math.min(this.players.length, 7) // show max 7 players' points
+
+        for(let i = 0; i < scoresDivs.length; i++) {
+            scoresDivs[i].innerText = "";
+        }
+
+        if (count > 0) {
+            // draw header
+            scoresDivs[0].innerText = this.labelNickname;
+            scoresDivs[1].innerText = this.labelAsteroidPoint;
+            scoresDivs[2].innerText = this.labelKillingPoint;
+        }
+
+        for (let i = 0; i < count; i++) {
+            const player = this.players[i]
+            scoresDivs[3+i*3].innerText = player.name;
+            scoresDivs[4+i*3].innerText = "" + player.asteroidPoints;
+            scoresDivs[5+i*3].innerText = "" + player.killingPoints;
+        }
+        const viewport_width = (viewport.right-viewport.left)
+        const viewport_height = (viewport.top-viewport.bottom)
+        let y_index = -1;
+        let x_index = 0;
+        let base_label_x = this.camera.position.x + viewport.left + 0.10*viewport_width;
+        let base_label_y = this.camera.position.y + viewport.top - 0.10*viewport_height;
+        for(let i = 0; i < scoresLabels.length; i++) {
+            x_index = i % 3;
+            if(x_index == 0) { y_index += 1}
+            let this_label_x = base_label_x + x_index*0.08*viewport_width;
+            let this_label_y = base_label_y - y_index*0.05*viewport_height;
+            
+            scoresLabels[i].position.set(this_label_x, 
+                                         this_label_y,
+                                         0)
         }
     }
 
